@@ -31,7 +31,7 @@ def createTargets(size):
 
 def createObstacles(size, targets, quantity):
 	import random
-	radii = np.array([10,20]) #the range of possible radii for the obstacles
+	radii = np.array([5,15]) #the range of possible radii for the obstacles
 	obstacles = np.zeros([quantity, 3]) #Nx3 matrix, columns are X,Y, and radius
 
 	#creates a random set of obstacles of random size
@@ -70,11 +70,18 @@ def createNodes(size, obstacles, quantity):
 			#checks for interception on each individual obstacle
 			for j in range(len(obstacles)):
 				targets = np.matrix([nodeX, nodeY])
-				check = checkIntersection(targets, obstacles[j,0], obstacles[j,1], obstacles[j,2])
-				if check:
-					nodes[i,0] = nodeX
-					nodes[i,1] = nodeY
+				test = checkIntersection(targets, obstacles[j,0], obstacles[j,1], obstacles[j,2])
+				if test == False:
 					break
+			if test:
+				check = True
+				nodes[i,0] = nodeX
+				nodes[i,1] = nodeY		
+				# if check:
+				# 	nodes[i,0] = nodeX
+				# 	nodes[i,1] = nodeY
+				# 	# break
+				# print 'still false'
 	return nodes
 
 def createEdges(nodes, obstacles, targets):
@@ -90,24 +97,14 @@ nodes = createNodes(size, obstacles, 50)
 edges = createEdges(nodes, obstacles, targets)
 aStar()
 
-# plt.scatter(nodes[:,0], nodes[:,1], s=1, alpha=0.5)
-# # plt.scatter(targets[:,0], targets[:,1], s=500, c='red',alpha=0.5)
-# plt.scatter(50, 50, s=10000, c='red',alpha=0.5)
-# plt.scatter(obstacles[:,0], obstacles[:,1], s=obstacles[2], c='green',alpha=0.5)
-# plt.Circle((50,50),10,color='r')
-
-# plt.show()
-
-print obstacles,'\n',nodes
-
-
+#plot everything
 fig = plt.figure()
 ax = fig.add_subplot(1,1,1)
 for i in range(len(obstacles)):
-	circ = plt.Circle((obstacles[i,0],obstacles[i,1]), radius = obstacles[i,2],alpha=0.8, color='blue')
+	circ = plt.Circle((obstacles[i,0],obstacles[i,1]), radius = obstacles[i,2],alpha=0.5, color='blue')
 	ax.add_patch(circ)
 for i in range(len(targets)):
-	circ = plt.Circle((targets[i,0],targets[i,1]), radius = 3, color='red')
+	circ = plt.Circle((targets[i,0],targets[i,1]), radius = 2, color='red')
 	ax.add_patch(circ)
 for i in range(len(nodes)):
 	circ = plt.Circle((nodes[i,0],nodes[i,1]), radius = 1, color='black')
