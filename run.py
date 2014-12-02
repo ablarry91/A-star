@@ -19,6 +19,7 @@ Turn in your well-commented code, as well as the graphical output for one exampl
 
 import numpy as np
 import matplotlib.pyplot as plt
+import time
 
 def createTargets(size):
 	import random
@@ -84,18 +85,206 @@ def createNodes(size, obstacles, quantity):
 				# print 'still false'
 	return nodes
 
+def point_inside_polygon(x,y,poly):
+
+    n = len(poly)
+    print len(poly)
+    inside =False
+
+    # p1x,p1y = poly[0]
+    p1x = poly[0,0]
+    p1y = poly[0,1]
+    for i in range(n+1):
+        p2x= poly[i % n,0]
+        p2y = poly[i % n,1]
+        if y > min(p1y,p2y):
+            if y <= max(p1y,p2y):
+                if x <= max(p1x,p2x):
+                    if p1y != p2y:
+                        xinters = (y-p1y)*(p2x-p1x)/(p2y-p1y)+p1x
+                    if p1x == p2x or x <= xinters:
+                        inside = True
+        p1x,p1y = p2x,p2y
+
+    return inside
+
 def createEdges(nodes, obstacles, targets):
-	pass
+	import itertools
+	import math
+	from shapely.geometry import Point
+	from shapely.geometry import MultiPoint
 
-def aStar():
-	pass
+	nodes = np.vstack([nodes,targets])
+	edgeDict = {}
 
+	for i in nodes:
+		edgeDict[hash(str(i))] = None
+
+	for i in itertools.combinations(nodes,2):
+		slope = (i[1][1]-i[0][1])/(i[1][0]-i[0][0])
+		thetaInv = math.atan(-1/slope)
+		intercept = i[1][1] - slope*i[1][0]
+		arrayX = np.array([i[0][0],i[1][0]])
+		arrayY = np.array([i[0][1],i[1][1]])
+
+		test = True
+		for j in range(len(obstacles)):
+			poly = np.zeros([4,2])
+			dX = obstacles[j,2]*np.cos(thetaInv)
+			dY = obstacles[j,2]*np.sin(thetaInv)
+
+			poly[0,0] = i[0][0] + dX
+			poly[0,1] = i[0][1] + dY
+			poly[1,0] = i[0][0] - dX
+			poly[1,1] = i[0][1] - dY
+			poly[2,0] = i[1][0] + dX
+			poly[2,1] = i[1][1] + dY
+			poly[3,0] = i[1][0] - dX
+			poly[3,1] = i[1][1] - dY	
+
+			poly = MultiPoint(poly).convex_hull
+			point = Point(obstacles[j,0],obstacles[j,1])
+
+			if poly.contains(point):
+				test = False
+				break
+
+		if test:
+			# plt.plot([i[0][0],i[1][0]],[i[0][1],i[1][1]])
+			try:
+				edgeDict[hash(str(i[0]))] = np.vstack([edgeDict[hash(str(i[0]))],i[1]])
+			except:
+				edgeDict[hash(str(i[0]))] = i[1]
+			try:
+				edgeDict[hash(str(i[1]))] = np.vstack([edgeDict[hash(str(i[1]))],i[0]])
+			except:
+				edgeDict[hash(str(i[1]))] = i[0]
+
+	return edgeDict
+
+def evalHeuristic(current,goal):
+	return np.sqrt(np.power(goal[1]-current[1],2)+np.power(goal[0]-current[0],2))
+
+def evalTrueCost(current, target, priorCost):
+	return np.sqrt(np.power(target[1]-current[1],2)+np.power(target[0]-current[0],2)) + priorCost
+
+def aStar(nodes, targets, edges):
+	untouchedNodes = np.vstack([nodes,targets]) #nodes that we haven't expanded yet and may want to
+	totalCostList = []  #tracks costs of nodes that we might want to expand
+	trueCostList = []
+	expandedList = []  #tracks nodes that we might want to expand
+	parentList = [] #a list of parent nodes for backwards tracking
+	touchedNodes = []
+
+	start = targets[0]
+	goal = targets[1]
+
+	current = start
+	for newEdge in edges[hash(str(current))]:
+		heuristic = evalHeuristic(newEdge, goal) #estimates the straight line distance
+
+		trueCost = evalTrueCost(current,newEdge,0) #finds distance traversed to find this node
+
+		#update lists
+		totalCost = heuristic + trueCost
+		trueCostList.append(trueCost)
+		totalCostList.append(totalCost)
+		expandedList.append(newEdge)
+		parentList.append(current)
+
+	#update your untouched list
+	# untouchedNodes = np.delete(untouchedNodes,len(untouchedNodes)-2,0)
+	touchedNodes.append(current)
+
+	#pick the best node to expand
+	lowestCostIndex = totalCostList.index(min(totalCostList))
+	current = expandedList[lowestCostIndex]
+	heuristic = evalHeuristic(current, goal)
+
+	#remove from lists
+
+
+	print 'i choose,',current
+
+	parentCost = trueCostList[lowestCostIndex]
+
+	plt.plot([start[0],current[0]],[start[1],current[1]])
+
+	count = 0
+	while heuristic != 0:
+		#remove old data
+		expandedList.pop(lowestCostIndex)
+		trueCostList.pop(lowestCostIndex)
+		totalCostList.pop(lowestCostIndex)
+
+		#expand your node
+		for newEdge in edges[hash(str(current))]:
+			#check to see if we've expanded this node already
+			skip = False
+			for touched in touchedNodes:	
+				try:
+					if newEdge[0] == touched[0] and newEdge[1] == touched[1]:
+						# print 'found a duplicate'
+						skip = True
+						break
+				except:
+					print "I think I'm out of choices here.  Giving up."
+					skip = True
+					break
+			if skip:
+				continue
+
+			#evaluate costs
+			heuristic = evalHeuristic(newEdge, goal) #estimates the straight line distance
+			trueCost = evalTrueCost(current,newEdge,parentCost) #finds distance traversed to find this node
+
+			#update lists
+			totalCost = heuristic + trueCost
+			trueCostList.append(trueCost)
+			totalCostList.append(totalCost)
+			expandedList.append(newEdge)
+			parentList.append(current)
+			touchedNodes.append(newEdge)
+
+		#pick the best node to expand
+		try:
+			lowestCostIndex = totalCostList.index(min(totalCostList))
+		except:
+			print 'No solution found.  I give up.'
+			break
+		#if this is empty, then we've exhausted our options?
+
+		#plot it
+		plt.plot([current[0],expandedList[lowestCostIndex][0]],[current[1],expandedList[lowestCostIndex][1]])
+
+		#update current node
+		current = expandedList[lowestCostIndex]
+
+		#update costs
+		heuristic = evalHeuristic(current, goal)
+		parentCost = trueCostList[lowestCostIndex]
+
+		#remove the node from your list of node candidates
+		# expandedList.pop(lowestCostIndex)
+		# trueCostList.pop(lowestCostIndex)
+		# totalCostList.pop(lowestCostIndex)
+
+		print 'i choose,',current,'with a cost of',min(totalCostList)
+
+		#in case you're indefinitely looping...
+		count += 1
+		if count >50:
+			break
+	# print len(touchedNodes)
+
+#get your initial time
+start = time.time()
+
+#build your grid, start/finish, obstacles, and nodes
 size = np.array([0,100,0,100]) #xMin, xMax, yMin, yMax
 targets = createTargets(size) #xStart, yStart, xGoal, yGoal
-obstacles = createObstacles(size, targets, 10) #xNode, yNode, radius
-nodes = createNodes(size, obstacles, 50)
-edges = createEdges(nodes, obstacles, targets)
-aStar()
+obstacles = createObstacles(size, targets, 30) #xNode, yNode, radius
+nodes = createNodes(size, obstacles,50)
 
 #plot everything
 fig = plt.figure()
@@ -107,9 +296,28 @@ for i in range(len(targets)):
 	circ = plt.Circle((targets[i,0],targets[i,1]), radius = 2, color='red')
 	ax.add_patch(circ)
 for i in range(len(nodes)):
-	circ = plt.Circle((nodes[i,0],nodes[i,1]), radius = 1, color='black')
+	circ = plt.Circle((nodes[i,0],nodes[i,1]), radius = .5, color='black')
 	ax.add_patch(circ)
+
+
+edges = createEdges(nodes, obstacles, targets)
+end = time.time()
+c = -start + end
+print "built my map in ",round(c,3),"seconds"
+
+aStar(nodes, targets, edges)
+print "A* completed in",round(-end+time.time(),3),"seconds"
+
 plt.axis(size, aspect=1)	
+
+end = time.time()
+c = -start + end
+
+print 'start at:',targets[0]
+print 'end at:',targets[1]
+print ''
+
+
 plt.show()
 
 
