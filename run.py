@@ -87,9 +87,24 @@ def createEdges(nodes, obstacles, targets):
 
 	#goes through every single combination of 2 nodes and evaluates if it intersects an obstacle.  
 	for i in itertools.combinations(nodes,2):
-		slope = (i[1][1]-i[0][1])/(i[1][0]-i[0][0])
-		thetaInv = math.atan(-1/slope)
-		intercept = i[1][1] - slope*i[1][0]
+		if i[1][0]-i[0][0] == 0:
+			#it is vertical
+			thetaInv = math.pi
+			slope = float('inf')
+			intercept = i[1][1] - slope*i[1][0]
+
+		# slope = (i[1][1]-i[0][1])/(i[1][0]-i[0][0])
+		# if slope == 0:
+		# 	thetaInv = 0
+		else:
+			slope = round((i[1][1]-i[0][1])/(i[1][0]-i[0][0]),10)
+			if slope == 0:
+				thetaInv = 0
+			else:
+				thetaInv = math.atan(-1/slope)
+			intercept = i[1][1] - slope*i[1][0]
+
+		# intercept = i[1][1] - slope*i[1][0]
 		arrayX = np.array([i[0][0],i[1][0]])
 		arrayY = np.array([i[0][1],i[1][1]])
 
@@ -272,44 +287,67 @@ nodes = createNodes(size, obstacles,40)
 fig = plt.figure()
 ax = fig.add_subplot(1,1,1)
 
+
+# node locations:
+ 
+# x          y
+# 25       25
+# 25       50
+# 25       75  start
+# 50       25
+# 50       50
+# 50       75  goal
+# 75       25
+# 75       50
+# 75       75
+ 
+# obstacle centers and radii:
+ 
+# x          y          radius
+# 30       30       4
+# 37       62       6
+# 37       75       5
+# 50       62       3
+# 62       50       4
+
 #INPUT YOUR DEMO STUFF HERE
 targets = np.zeros([2,2])
-targets[0,0] = 16
-targets[0,1] = 86
-targets[1,0] = 61
-targets[1,1] = 12
-nodes = np.zeros([6,2])
-nodes[0,0] = 11
-nodes[0,1] = 54
-nodes[1,0] = 26
-nodes[1,1] = 26
-nodes[2,0] = 43
-nodes[2,1] = 44
-nodes[3,0] = 92
-nodes[3,1] = 12
-nodes[4,0] = 50
-nodes[4,1] = 91
-nodes[5,0] = 79
-nodes[5,1] = 58
-obstacles = np.zeros([6,3])
-obstacles[0,0] = 32.25
-obstacles[0,1] = 60.2
-obstacles[0,2] = 16.5
-obstacles[1,0] = 73.4
-obstacles[1,1] = 90.8
-obstacles[1,2] = 12.4
-obstacles[2,0] = 50
-obstacles[2,1] = 51.1
-obstacles[2,2] = 6.4
-obstacles[3,0] = 93
-obstacles[3,1] = 38
-obstacles[3,2] = 8.8
-obstacles[4,0] = 76.8
-obstacles[4,1] = 27.2
-obstacles[4,2] = 13.7
-obstacles[5,0] = 77.9
-obstacles[5,1] = 7
-obstacles[5,2] = 7.6
+targets[0,0] = 25
+targets[0,1] = 75
+targets[1,0] = 50
+targets[1,1] = 75
+nodes = np.zeros([7,2])
+nodes[0,0] = 25
+nodes[0,1] = 25
+nodes[1,0] = 25
+nodes[1,1] = 50
+nodes[2,0] = 50
+nodes[2,1] = 25
+nodes[3,0] = 50
+nodes[3,1] = 50
+nodes[4,0] = 75
+nodes[4,1] = 25
+nodes[5,0] = 75
+nodes[5,1] = 50
+nodes[6,0] = 75
+nodes[6,1] = 75
+obstacles = np.zeros([5,3])
+obstacles[0,0] = 30
+obstacles[0,1] = 30
+obstacles[0,2] = 4
+obstacles[1,0] = 37
+obstacles[1,1] = 62
+obstacles[1,2] = 6
+obstacles[2,0] = 37
+obstacles[2,1] = 75
+obstacles[2,2] = 5
+obstacles[3,0] = 50
+obstacles[3,1] = 62
+obstacles[3,2] = 3
+obstacles[4,0] = 62
+obstacles[4,1] = 50
+obstacles[4,2] = 4
+
 
 #build edges
 edges = createEdges(nodes, obstacles, targets)
